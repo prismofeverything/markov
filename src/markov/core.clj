@@ -17,15 +17,15 @@
   []
   (MarkovChain. {} (empty-wheel) (empty-wheel)))
 
-(defn inc-slice 
-  [slice]
-  (update-in slice [:weight] inc))
-
 (defn wheel-slice 
   [wheel token]
   (or
    (-> wheel :slices (get token))
    (MarkovSlice. token 0)))
+
+(defn inc-slice 
+  [slice]
+  (update-in slice [:weight] inc))
 
 (defn wheel-weight 
   [wheel token]
@@ -34,14 +34,16 @@
 (defn observe-token 
   [wheel token]
   (let [slice (inc-slice (wheel-slice wheel token))]
-    (MarkovWheel. (assoc (:slices wheel) token slice) (+ (:total wheel) 1))))
+    (-> wheel
+        (update-in [:slices token] (constantly slice))
+        (update-in [:total] inc))))
 
 (defn spin 
   [wheel]
   (if (empty? (:slices wheel))
     nil
     (let [fate (* (rand) (:total wheel))]
-      (loop [tokens (seq (keys (:slices wheel)))
+      (loop [tokens (-> wheel :slices keys seq)
              step 0]
         (let [next-step (+ step (wheel-weight wheel (first tokens)))]
           (if (> fate next-step)
@@ -67,17 +69,15 @@
 
 (defn single-link
   [chain from-token to-token direction]
-  (assoc-in
-   chain
-   [:nodes from-token]
-   (add-orientation
-    (continuing-node chain from-token (direction-map direction) :false)
-    direction to-token)))
+  (let [continuing (continuing-node chain from-token (direction-map direction) :false)
+        oriented (add-orientation continuing direction to-token)]
+    (assoc-in chain [:nodes from-token] oriented)))
 
 (defn add-link
   [chain from-token to-token]
-  (let [outgoing (single-link chain from-token to-token :outgoing)]
-    (single-link outgoing to-token from-token :incoming)))
+  (-> chain
+      (single-link from-token to-token :outgoing)
+      (single-link to-token from-token :incoming)))
 
 (defn add-terminal
   [chain terminal token]
@@ -110,7 +110,7 @@
 
 (defn follow-strand
   [chain]
-  (let [beginning (spin (get chain :beginning))]
+  (let [beginning (-> chain :beginning spin)]
     (cons beginning (reverse (from-focus chain beginning :outgoing)))))
 
 (defn issue-strand
