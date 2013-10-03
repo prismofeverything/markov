@@ -106,7 +106,7 @@
           (= (re-find #"[^a-zA-Z0-9\($]+" token) token)
           (re-find #"^://" token)
           (#{\( \{ \[ \" \$} (last sentence))
-          (#{\'} (first token)))
+          (#{\' \.} (first token)))
        (str sentence token)
        (str sentence " " token)))
    (first parts) (rest parts)))
