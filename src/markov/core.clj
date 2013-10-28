@@ -27,9 +27,21 @@
   [slice]
   (update-in slice [:weight] inc))
 
+(defn wheel-empty?
+  [wheel]
+  (if wheel
+    (empty? (:slices wheel))
+    true))
+
 (defn wheel-weight 
   [wheel token]
   (-> wheel :slices (get token) :weight))
+
+(defn add-slice
+  [wheel slice]
+  (-> wheel
+      (assoc-in [:slices (:token slice)] slice)
+      (update-in [:total] (partial + (:weight slice)))))
 
 (defn observe-token 
   [wheel token]
@@ -37,6 +49,18 @@
     (-> wheel
         (update-in [:slices token] (constantly slice))
         (update-in [:total] inc))))
+
+(defn filter-slices
+  [wheel p]
+  (let [[slices weight] 
+        (reduce
+         (fn [[slices weight] slice]
+           (if (p (:token slice))
+             [(assoc slices (:token slice) slice) (+ weight (:weight slice))]
+             [slices weight]))
+         [{} 0]
+         (vals (:slices wheel)))]
+    (MarkovWheel. slices weight)))
 
 (defn spin 
   [wheel]

@@ -4,6 +4,8 @@
             [opennlp.nlp :as nlp]
             [markov.core :as markov]))
 
+(import markov.core.MarkovSlice)
+
 (def get-sentences (nlp/make-sentence-detector (io/resource "models/en-sent.bin")))
 (def tokenize (nlp/make-tokenizer (io/resource "models/en-token.bin")))
 (def detokenize (nlp/make-detokenizer (io/resource "models/english-detokenizer.xml")))
@@ -84,6 +86,52 @@
         (markov/spin (get-in chain [:pos pos])))
       (markov/spin (get-in chain [:pos pos])))))
 
+(defn refine-topiary
+  [branches]
+  ;; (println "REFINING" branches)
+  (reduce
+   (fn [wheel [subtoken branch weight]]
+     (if subtoken
+       (markov/add-slice wheel (markov/MarkovSlice. [subtoken branch] weight)) ;; (if (zero? weight) 1 weight)))
+       wheel))
+   (markov/empty-wheel) branches))
+
+(defn build-template-tree
+  [chain template pos [token slice]]
+  (if-let [node (get-in chain [:nodes [token pos]])]
+    (if-let [head (first template)]
+      (let [outgoing (get-in node [:outgoing head])
+            branches (map (partial build-template-tree chain (rest template) head) (seq (:slices outgoing)))
+            topiary (refine-topiary branches)]
+        [token topiary (:total topiary)])
+      [token nil (:weight slice)])))
+
+(defn build-template-chain
+  [chain template]
+  (let [head (first template)
+        start (get-in chain [:pos head])
+        branches (map (partial build-template-tree chain (rest template) head) (seq (:slices start)))]
+    (refine-topiary branches)))
+
+(defn pluck-tree
+  [tree]
+  (loop [tones []
+         tree tree]
+    (if tree
+      (let [[token subtree] (markov/spin tree)]
+        (recur (conj tones token) subtree))
+      tones)))
+
+(defn pluck-template-tree
+  [chain template]
+  (let [tree (build-template-chain chain template)]
+    (pluck-tree tree)))
+
+(defn pluck-chain
+  [chain]
+  (let [template (markov/spin (:templates chain))]
+    (pluck-template-tree chain template)))
+
 (defn generate-parts
   [chain]
   (let [template (markov/spin (:templates chain))
@@ -114,3 +162,7 @@
 (defn generate-sentence
   [chain]
   (unparse (generate-parts chain)))
+
+(defn generate-coherent-sentence
+  [chain]
+  (unparse (pluck-chain chain)))
