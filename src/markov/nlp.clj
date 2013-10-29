@@ -88,11 +88,10 @@
 
 (defn refine-topiary
   [branches]
-  ;; (println "REFINING" branches)
   (reduce
    (fn [wheel [subtoken branch weight]]
      (if subtoken
-       (markov/add-slice wheel (markov/MarkovSlice. [subtoken branch] weight)) ;; (if (zero? weight) 1 weight)))
+       (markov/add-slice wheel (markov/MarkovSlice. subtoken weight branch))
        wheel))
    (markov/empty-wheel) branches))
 
@@ -118,8 +117,8 @@
   (loop [tones []
          tree tree]
     (if tree
-      (let [[token subtree] (markov/spin tree)]
-        (recur (conj tones token) subtree))
+      (let [slice (markov/spin-slice tree)]
+        (recur (conj tones (:token slice)) (:data slice)))
       tones)))
 
 (defn pluck-template-tree

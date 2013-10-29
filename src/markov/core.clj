@@ -1,7 +1,7 @@
 (ns markov.core)
 
 (defrecord MarkovWheel [slices total])
-(defrecord MarkovSlice [token weight])
+(defrecord MarkovSlice [token weight data])
 (defrecord MarkovNode [token incoming outgoing beginning ending])
 (defrecord MarkovChain [nodes beginning ending])
 
@@ -21,7 +21,7 @@
   [wheel token]
   (or
    (-> wheel :slices (get token))
-   (MarkovSlice. token 0)))
+   (MarkovSlice. token 0 nil)))
 
 (defn inc-slice 
   [slice]
@@ -62,17 +62,23 @@
          (vals (:slices wheel)))]
     (MarkovWheel. slices weight)))
 
-(defn spin 
+(defn spin-slice
   [wheel]
   (if (empty? (:slices wheel))
     nil
     (let [fate (* (rand) (:total wheel))]
-      (loop [tokens (-> wheel :slices keys seq)
+      (loop [slices (-> wheel :slices vals seq)
              step 0]
-        (let [next-step (+ step (wheel-weight wheel (first tokens)))]
+        (let [slice (first slices)
+              next-step (+ step (:weight slice))]
           (if (> fate next-step)
-            (recur (next tokens) next-step)
-            (first tokens)))))))
+            (recur (next slices) next-step)
+            slice))))))
+
+(defn spin 
+  [wheel]
+  (let [slice (spin-slice wheel)]
+    (:token slice)))
 
 (defn node-for
   [chain token]
