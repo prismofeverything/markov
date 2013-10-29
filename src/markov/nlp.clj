@@ -15,6 +15,8 @@
 (defrecord NaturalNode [token incoming outgoing])
 (defrecord NaturalChain [templates nodes pos])
 
+(def template-limit 24)
+
 (defn empty-node
   [token]
   (NaturalNode. token {} {}))
@@ -61,7 +63,7 @@
                        chain
                        [:pos previous-pos]
                        #(markov/observe-token (or % (markov/empty-wheel)) previous-token))]
-            (if (empty? sentence)
+            (if (seq sentence)
               chain
               (let [[token pos] (first sentence)]
                 (recur 
@@ -88,12 +90,13 @@
 
 (defn refine-topiary
   [branches]
-  (reduce
-   (fn [wheel [subtoken branch weight]]
-     (if subtoken
-       (markov/add-slice wheel (markov/MarkovSlice. subtoken weight branch))
-       wheel))
-   (markov/empty-wheel) branches))
+  (let [wheel (reduce
+               (fn [wheel [subtoken branch weight]]
+                 (if subtoken
+                   (markov/add-slice wheel (markov/MarkovSlice. subtoken weight branch))
+                   wheel))
+               (markov/empty-wheel) branches)]
+    (and (not (markov/wheel-empty? wheel)) wheel)))
 
 (defn build-template-tree
   [chain template pos [token slice]]
@@ -102,7 +105,8 @@
       (let [outgoing (get-in node [:outgoing head])
             branches (map (partial build-template-tree chain (rest template) head) (seq (:slices outgoing)))
             topiary (refine-topiary branches)]
-        [token topiary (:total topiary)])
+        (if topiary
+          [token topiary (:total topiary)]))
       [token nil (:weight slice)])))
 
 (defn build-template-chain
@@ -128,7 +132,9 @@
 
 (defn pluck-chain
   [chain]
-  (let [template (markov/spin (:templates chain))]
+  (let [slim (markov/filter-slices (:templates chain) #(> template-limit (count %)))
+        template (markov/spin slim)]
+    (println "template length" (count template) template)
     (pluck-template-tree chain template)))
 
 (defn generate-parts
@@ -153,7 +159,8 @@
           (= (re-find #"[^a-zA-Z0-9\($]+" token) token)
           (re-find #"^://" token)
           (#{\( \{ \[ \" \$} (last sentence))
-          (#{\' \.} (first token)))
+          (#{\' \.} (first token))
+          (= token "n't"))
        (str sentence token)
        (str sentence " " token)))
    (first parts) (rest parts)))
