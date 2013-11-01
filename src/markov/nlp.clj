@@ -63,7 +63,7 @@
                        chain
                        [:pos previous-pos]
                        #(markov/observe-token (or % (markov/empty-wheel)) previous-token))]
-            (if (seq sentence)
+            (if (empty? sentence)
               chain
               (let [[token pos] (first sentence)]
                 (recur 
@@ -131,11 +131,12 @@
     (pluck-tree tree)))
 
 (defn pluck-chain
-  [chain]
-  (let [slim (markov/filter-slices (:templates chain) #(> template-limit (count %)))
-        template (markov/spin slim)]
-    (println "template length" (count template) template)
-    (pluck-template-tree chain template)))
+  ([chain] (pluck-chain chain template-limit))
+  ([chain limit] 
+     (let [slim (markov/filter-slices (:templates chain) #(> limit (count %)))
+           template (markov/spin slim)]
+       (println "template length" (count template) template)
+       (pluck-template-tree chain template))))
 
 (defn generate-parts
   [chain]
@@ -170,5 +171,5 @@
   (unparse (generate-parts chain)))
 
 (defn generate-coherent-sentence
-  [chain]
-  (unparse (pluck-chain chain)))
+  [chain limit]
+  (unparse (pluck-chain chain limit)))

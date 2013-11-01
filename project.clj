@@ -1,4 +1,4 @@
-(defproject markov "0.0.8"
+(defproject markov "0.0.11"
   :description "Generate paths through token space"
   :url "http://youdonotexist.com"
   :license {:name "Eclipse Public License"
@@ -6,3 +6,4 @@
   :jvm-opts ["-Xmx512m"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [clojure-opennlp "0.3.1"]])
+
