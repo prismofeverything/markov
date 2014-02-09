@@ -80,6 +80,18 @@
   (let [slice (spin-slice wheel)]
     (:token slice)))
 
+(defn remove-slice
+  [wheel slice]
+  (-> wheel
+      (update-in [:slices] #(dissoc % (:token slice)))
+      (update-in [:total] #(- % (:weight slice)))))
+
+(defn pull
+  [wheel]
+  (let [slice (spin-slice wheel)
+        wheel (remove-slice wheel slice)]
+    [(:token slice) wheel]))
+
 (defn node-for
   [chain token]
   (or

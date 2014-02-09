@@ -27,7 +27,9 @@
 
 (defn parse-sentence
   [sentence]
-  (pos-tag (tokenize sentence)))
+  (try 
+    (pos-tag (tokenize sentence))
+    (catch Exception e (println "Bad sentence:" sentence))))
 
 (defn continue-node
   [node direction [to-token to-pos]]
@@ -87,6 +89,34 @@
         token
         (markov/spin (get-in chain [:pos pos])))
       (markov/spin (get-in chain [:pos pos])))))
+
+(defn follow-thread
+  [chain pos template wheel]
+  (if (empty? template)
+    (list (markov/spin wheel))
+    (let [subpos (first template)
+          subtemplate (rest template)]
+      (loop [wheel wheel]
+        (if-not (markov/wheel-empty? wheel)
+          (let [[token wheel] (markov/pull wheel)
+                subwheel (get-in chain [:nodes [token pos] :outgoing subpos])
+                thread (follow-thread chain subpos subtemplate subwheel)]
+            (println pos template token thread)
+            (if thread
+              (cons token thread)
+              (recur wheel))))))))
+
+(defn pull-thread
+  [chain template]
+  (if-not (empty? template)
+    (let [pos (first template)
+          subtemplate (rest template)]
+      (follow-thread chain pos subtemplate (get-in chain [:pos pos])))))
+
+(defn pull-template
+  [chain] 
+  (let [template (markov/spin (:templates chain))]
+    (pull-thread chain template)))
 
 (defn refine-topiary
   [branches]
@@ -170,6 +200,10 @@
   [chain]
   (unparse (generate-parts chain)))
 
-(defn generate-coherent-sentence
+(defn generate-exponential-sentence
   [chain limit]
   (unparse (pluck-chain chain limit)))
+
+(defn generate-coherent-sentence
+  [chain]
+  (unparse (pull-template chain)))
