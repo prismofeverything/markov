@@ -103,7 +103,6 @@
           (let [[token wheel] (markov/pull wheel)
                 subwheel (get-in chain [:nodes [token pos] :outgoing subpos])
                 thread (follow-thread chain subpos subtemplate subwheel)]
-            (println pos template token thread)
             (if thread
               (cons token thread)
               (recur wheel))))))))
