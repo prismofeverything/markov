@@ -1,4 +1,4 @@
-(defproject markov "0.0.13"
+(defproject markov "0.0.14"
   :description "Generate paths through token space"
   :url "http://youdonotexist.com"
   :license {:name "Eclipse Public License"

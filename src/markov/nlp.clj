@@ -93,7 +93,8 @@
 (defn follow-thread
   [chain pos template wheel]
   (if (empty? template)
-    (list (markov/spin wheel))
+    (if-not (markov/wheel-empty? wheel)
+      (list (markov/spin wheel)))
     (let [subpos (first template)
           subtemplate (rest template)]
       (loop [wheel wheel]
