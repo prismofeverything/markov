@@ -94,7 +94,8 @@
   [chain pos template wheel]
   (if (empty? template)
     (if-not (markov/wheel-empty? wheel)
-      (list (markov/spin wheel)))
+      (if-let [spin (markov/spin wheel)]
+        (list spin)))
     (let [subpos (first template)
           subtemplate (rest template)]
       (loop [wheel wheel]
