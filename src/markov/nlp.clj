@@ -55,23 +55,27 @@
 
 (defn distribute-sentence
   [chain raw]
-  (let [sentence (parse-sentence raw)]
-    (if-let [[token pos] (first sentence)]
-      (let [template (map last sentence)]
-        (loop [chain (update-in chain [:templates] #(markov/observe-token % template))
-               [previous-token previous-pos] [token pos]
-               sentence (rest sentence)]
-          (let [chain (update-in
-                       chain
-                       [:pos previous-pos]
-                       #(markov/observe-token (or % (markov/empty-wheel)) previous-token))]
-            (if (empty? sentence)
-              chain
-              (let [[token pos] (first sentence)]
-                (recur 
-                 (add-link chain [previous-token previous-pos] [token pos])
-                 [token pos]
-                 (rest sentence))))))))))
+  (if (empty? raw)
+    chain
+    (if-let [sentence (parse-sentence raw)]
+      (if-let [[token pos] (first sentence)]
+        (let [template (map last sentence)]
+          (loop [chain (update-in chain [:templates] #(markov/observe-token % template))
+                 [previous-token previous-pos] [token pos]
+                 sentence (rest sentence)]
+            (let [chain (update-in
+                         chain
+                         [:pos previous-pos]
+                         #(markov/observe-token (or % (markov/empty-wheel)) previous-token))]
+              (if (empty? sentence)
+                chain
+                (let [[token pos] (first sentence)]
+                  (recur 
+                   (add-link chain [previous-token previous-pos] [token pos])
+                   [token pos]
+                   (rest sentence))))))) 
+        chain) 
+      chain)))
 
 (defn distribute-speech
   [chain speech]

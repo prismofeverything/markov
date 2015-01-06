@@ -43,7 +43,7 @@
       (assoc-in [:slices (:token slice)] slice)
       (update-in [:total] (partial + (:weight slice)))))
 
-(defn observe-token 
+(defn observe-token
   [wheel token]
   (let [slice (inc-slice (wheel-slice wheel token))]
     (-> wheel
